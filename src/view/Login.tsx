@@ -9,7 +9,7 @@ export const Login = ({navigation}: {navigation: any}) => {
 
   const [pin, setPin] = useState('');
 
-
+  //Pin 1111 will work
   useEffect(
     React.useCallback(() => {
       if(pin === '1111'){
@@ -70,6 +70,8 @@ export const Login = ({navigation}: {navigation: any}) => {
           backgroundColor: 'white',
           padding: 10,
         }}
+        inputMode={'numeric'}
+        secureTextEntry={true}
         onChangeText={(text: string) => {
           setPin(text);
         }}

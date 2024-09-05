@@ -1,65 +1,106 @@
-import {FlatList, View} from 'react-native';
+import {FlatList, RefreshControl, View} from 'react-native';
 import {Transactions} from '../model/Transaction';
-import { CardView } from '../component/CardView';
-import { DETAIL } from '../util/Routes';
-import { saveSingleData } from '../zustand/TransactionStore';
+import {DETAIL} from '../util/Routes';
+import {saveSingleData} from '../zustand/TransactionStore';
+import {useState} from 'react';
+import {transactionHistory} from '../data/TransactionData';
+import {CardView} from '../component/CardView';
+import {Menu, Visible, VisibleOff} from '../../assets/images';
+import {BankCardView} from '../component/BankCardView';
+import ReactNativeBiometrics, {BiometryTypes} from 'react-native-biometrics';
+import {AppText} from '../component/AppText';
 
-export const TransactionHistory = ({navigation} : {navigation: any}) => {
-
+export const TransactionHistory = ({navigation}: {navigation: any}) => {
   const saveData = saveSingleData();
+  const [refresh, setRefresh] = useState(false);
+  const [transactionList, setTransactionList] = useState(transactionHistory);
+  const [balance, setBalance] = useState('RM ****');
+  const [icon, setIcon] = useState(VisibleOff);
 
-  const transactionHistory: Transactions = [
-    {
-      id: '1',
-      amount: 'RM 1,500.00',
-      date: '05/09/2024',
-      description: 'House Loan',
-      type: 'Debit',
-    },
-    {
-      id: '2',
-      amount: 'RM 150.60',
-      date: '05/09/2024',
-      description: 'Groceries',
-      type: 'Debit',
-    },
-    {
-      id: '3',
-      amount: 'RM 12,000.00',
-      date: '05/09/2024',
-      description: 'Salary',
-      type: 'Credit',
-    },
-    {
-      id: '4',
-      amount: 'RM 925.00',
-      date: '01/09/2024',
-      description: 'Car Loan',
-      type: 'Debit',
-    },
-    {
-      id: '5',
-      amount: 'RM 340.80',
-      date: '02/09/2024',
-      description: 'Star PC Sdn Bhd',
-      type: 'Debit',
-    },
-  ];
+  //Just reload dummy data, fake timeout as well to simulate buffer
+  const refreshTransaction = () => {
+    setTimeout(() => {
+      setTransactionList(transactionHistory);
+      setRefresh(false);
+    }, 1000);
+  };
+
+  const handleAccVisiblity = () =>{
+    if(balance === 'RM ****'){
+      showBalanceUponVerified();
+    } else {
+      setIcon(VisibleOff);
+      setBalance('RM ****');
+    }
+  }
+
+  const showBalanceUponVerified = () => {
+    const rnBiometrics = new ReactNativeBiometrics();
+
+    rnBiometrics.isSensorAvailable().then(resultObject => {
+      const {available, biometryType} = resultObject;
+
+      if (available && biometryType === BiometryTypes.TouchID) {
+        console.log('TouchID is supported');
+      } else if (available && biometryType === BiometryTypes.FaceID) {
+        console.log('FaceID is supported');
+      } else if (available && biometryType === BiometryTypes.Biometrics) {
+        console.log('Biometrics is supported');
+      } else {
+        console.log('Biometrics not supported');
+      }
+    });
+
+    rnBiometrics
+      .simplePrompt({promptMessage: 'Confirm fingerprint'})
+      .then(resultObject => {
+        const {success} = resultObject;
+
+        if (success) {
+          setBalance('RM 24,500.00');
+          setIcon(Visible);
+          console.log('successful biometrics provided');
+        } else {
+          console.log('user cancelled biometric prompt');
+        }
+      })
+      .catch(() => {
+        console.log('biometrics failed');
+      });
+  };
 
   return (
     <View>
-      {transactionHistory.length > 0 && (
+      <AppText text={'Bank Information'} padding={10}></AppText>
+      <BankCardView
+        title={'Account: 617856444'}
+        subtitle={balance}
+        imageUrl={icon}
+        onClick={() => {
+          handleAccVisiblity();
+        }}
+      />
+      <AppText text={'Transaction History'} padding={10}></AppText>
+      {transactionList.length > 0 && (
         <FlatList
           keyExtractor={item => item.id}
-          data={transactionHistory}
+          data={transactionList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refresh}
+              onRefresh={() => {
+                setRefresh(true);
+                refreshTransaction();
+              }}></RefreshControl>
+          }
           renderItem={({item}) => (
             <CardView
-              title={item.amount}
-              subtitle={item.description}
-              imageUrl={''}
+              title={item.description}
+              subtitle={item.date}
+              imageUrl={Menu}
               onClick={() => {
                 saveData.execute(item);
-                navigation.navigate(DETAIL)
+                navigation.navigate(DETAIL);
               }}
             />
           )}
