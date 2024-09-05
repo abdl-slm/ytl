@@ -1,7 +1,65 @@
-import {TextInput, View} from 'react-native';
-import { windowWidth } from '../util/Constants';
+import {Button, TextInput, View} from 'react-native';
+import {windowWidth} from '../util/Constants';
+import ReactNativeBiometrics, {BiometryTypes} from 'react-native-biometrics';
+import { HISTORY } from '../util/Routes';
+import { useEffect, useState } from 'react';
+import React from 'react';
 
-export const Login = () => {
+export const Login = ({navigation}: {navigation: any}) => {
+
+  const [pin, setPin] = useState('');
+
+
+  useEffect(
+    React.useCallback(() => {
+      if(pin === '1111'){
+        navigateToHistory();
+      }
+    }, [pin]),
+  );
+
+
+  const  navigateToHistory = () =>{
+    navigation.reset({
+      index: 0,
+      routes: [{name: HISTORY}],
+    });
+  }
+  
+  const handleBiometric = () => {
+    const rnBiometrics = new ReactNativeBiometrics();
+
+    rnBiometrics.isSensorAvailable().then(resultObject => {
+      const {available, biometryType} = resultObject;
+
+      if (available && biometryType === BiometryTypes.TouchID) {
+        console.log('TouchID is supported');
+      } else if (available && biometryType === BiometryTypes.FaceID) {
+        console.log('FaceID is supported');
+      } else if (available && biometryType === BiometryTypes.Biometrics) {
+        console.log('Biometrics is supported');
+      } else {
+        console.log('Biometrics not supported');
+      }
+    });
+
+    rnBiometrics
+      .simplePrompt({promptMessage: 'Confirm fingerprint'})
+      .then(resultObject => {
+        const {success} = resultObject;
+
+        if (success) {
+          navigateToHistory();
+          console.log('successful biometrics provided');
+        } else {
+          console.log('user cancelled biometric prompt');
+        }
+      })
+      .catch(() => {
+        console.log('biometrics failed');
+      });
+  };
+
   return (
     <View style={{justifyContent: 'center', margin: 10}}>
       <TextInput
@@ -13,9 +71,14 @@ export const Login = () => {
           padding: 10,
         }}
         onChangeText={(text: string) => {
-          // setTransactionName(text);
+          setPin(text);
         }}
       />
+      <Button
+        title="biometric"
+        onPress={() => {
+          handleBiometric();
+        }}></Button>
     </View>
   );
 };
